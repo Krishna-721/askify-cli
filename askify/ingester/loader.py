@@ -5,10 +5,18 @@ import fitz  # PyMuPDF
 
 CODE_EXT= {".py",".js",".ts",".cpp",".c",".java",".go",".rs"}
 DOC_EXT= {".pdf",".md",".txt",".rst"}
+SKIP_DIRS={"__pycache__", ".git", "node_modules", ".venv", "venv", "store"}
+SKIP_EXTS = {".pyc", ".pyo", ".lock", ".log"}
+
 
 def load_path(path:str)->list[dict]:
     p=Path(path)
-    files=[]
+    files=[    
+        f for f in p.rglob("*") 
+        if f.is_file() 
+        and f.suffix not in SKIP_EXTS
+        and not any(skip in f.parts for skip in SKIP_DIRS)
+    ]
 
     if p.is_file():
         files=[p]
