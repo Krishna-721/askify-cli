@@ -2,36 +2,36 @@ import os
 from pathlib import Path
 import fitz  # PyMuPDF
 
-
-CODE_EXT= {".py",".js",".ts",".cpp",".c",".java",".go",".rs"}
-DOC_EXT= {".pdf",".md",".txt",".rst"}
-SKIP_DIRS={"__pycache__", ".git", "node_modules", ".venv", "venv", "store"}
+CODE_EXT = {".py", ".js", ".ts", ".cpp", ".c", ".java", ".go", ".rs"}
+DOC_EXT = {".pdf", ".md", ".txt", ".rst"}
+SKIP_DIRS = {"__pycache__", ".git", "node_modules", ".venv", "venv", "store"}
 SKIP_EXTS = {".pyc", ".pyo", ".lock", ".log"}
 
 
-def load_path(path:str)->list[dict]:
-    p=Path(path)
-    files=[    
-        f for f in p.rglob("*") 
-        if f.is_file() 
-        and f.suffix not in SKIP_EXTS
-        and not any(skip in f.parts for skip in SKIP_DIRS)
-    ]
+def load_path(path: str) -> list[dict]:
+    p = Path(path)
 
     if p.is_file():
-        files=[p]
+        files = [p]
     elif p.is_dir():
-        files=[f for f in p.rglob("*") if f.is_file()]
-    else: 
+        files = [
+            f for f in p.rglob("*")
+            if f.is_file()
+            and f.suffix not in SKIP_EXTS
+            and not any(skip in f.parts for skip in SKIP_DIRS)
+        ]
+    else:
         raise ValueError(f"Path not found! {path}")
 
-    results=[]
+    print(f"[askify] Loaded {len(files)} files")
+
+    results = []
     for f in files:
-        ext= f.suffix.lower()
+        ext = f.suffix.lower()
         if ext in CODE_EXT:
-            results+=load_code_file(f)
+            results += load_code_file(f)
         elif ext in DOC_EXT:
-            results+=load_doc_file(f)
+            results += load_doc_file(f)
 
     return results
     
