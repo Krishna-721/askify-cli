@@ -24,7 +24,7 @@ def print_banner():
  /_/ |_|___(_)_/\_/_/_/  \_, / 
                          /___/  
 [/bold yellow]
-[dim]v0.1.0 — Know your stuff. Chat with your code and documents[/dim]
+[dim]v1.0.0 — Know your stuff. Chat with your code and documents[/dim]
 """)
 
 def save_history(query: str, answer: str):

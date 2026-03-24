@@ -14,7 +14,8 @@ dependencies = [
     "sentence-transformers",
     "pymupdf",
     "python-dotenv",
-    "rich"
+    "rich",
+    "python-docx"
 ]
 
 [project.scripts]

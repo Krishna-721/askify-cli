@@ -1,9 +1,11 @@
 import os
 from pathlib import Path
 import fitz  # PyMuPDF
+from docx import Document
+
 
 CODE_EXT = {".py", ".js", ".ts", ".cpp", ".c", ".java", ".go", ".rs"}
-DOC_EXT = {".pdf", ".md", ".txt", ".rst"}
+DOC_EXT = {".pdf", ".md", ".txt", ".rst",".docx"}
 SKIP_DIRS = {"__pycache__", ".git", "node_modules", ".venv", "venv", "store"}
 SKIP_EXTS = {".pyc", ".pyo", ".lock", ".log"}
 
@@ -48,6 +50,8 @@ def load_doc_file(path:Path)->list[dict]:
     try:
         if ext==".pdf":
             return load_pdf(path)
+        elif ext == ".docx":
+            return load_docx(path)
         else:
             content=path.read_text(encoding="utf-8",errors="ignore")
             return [{"content": content, "source":str(path), "type":"document"}]
@@ -67,3 +71,8 @@ def load_pdf(path: Path) -> list[dict]:
                 "type": "document"
             })
     return pages
+
+def load_docx(path: Path) -> list[dict]:
+    doc = Document(str(path))
+    content = "\n\n".join([p.text for p in doc.paragraphs if p.text.strip()])
+    return [{"content": content, "source": str(path), "type": "document"}]

@@ -1,17 +1,17 @@
+import os
+os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+
 import chromadb
 from sentence_transformers import SentenceTransformer
-import os
-from dotenv import load_dotenv
 import hashlib
+
+from dotenv import load_dotenv
+load_dotenv()
 
 MODEL_NAME = "all-MiniLM-L6-v2"
 CHROMA_DIR = ".askify/store"
 
-load_dotenv()
-os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
-
 model = SentenceTransformer(MODEL_NAME)
-
 
 def get_collection():
     client = chromadb.PersistentClient(path=CHROMA_DIR)
