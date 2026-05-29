@@ -6,20 +6,66 @@ env_path = os.path.join(os.path.dirname(__file__), "..", ".env")
 load_dotenv(env_path)
 
 client = Groq(api_key=os.getenv("GROQ_CLIENT"))
-def get_llama_response(query:str, chunks: list[str], max_tokens=4028, temperature=0.4):
 
-        context="\n\n".join(chunks)
-        user_message=f"Context:\n {context}\n \nQuestion:\n {query}"
 
-        resp = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": "You are master of work and the one who helps students. You should act like a calm, senior candidate of the big company and help students and people solve their problems. Be precise and direct no shortcuts and bluffs, and you should admit when the context does not have enough information. Never give blind or biased answers. Always answer from the given and provided context only. If some other ir-relevant this has ben asked, and politely say i don't know and always try to be inside the 4028 token limit."},
-                {"role": "user", "content": user_message}
-            ],
-            max_tokens=max_tokens,
-            temperature=temperature
-        )
-        
-        return resp.choices[0].message.content.strip()
-    
+def get_llama_response(
+    query: str,
+    chunks: list[str],
+    metadata: list[dict],
+    max_tokens=4028,
+    temperature=0.4,
+):
+    source_context = ""
+
+    for chunk, meta in zip(chunks, metadata):
+        source_context += f"\nSOURCE: {meta['source']}\n{chunk}\n"
+
+    user_message = f"""
+Context:
+
+{source_context}
+
+Question:
+{query}
+"""
+
+    resp = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[
+            {
+                "role": "system",
+                "content": """
+                    You are Askify, a retrieval-augmented assistant.
+
+                    Answer ONLY using the provided context.
+
+                    If the answer cannot be found in the context,
+                    say "I don't know based on the indexed files."
+
+                    Rules:
+                    - Do not invent files.
+                    - Do not invent functions.
+                    - Do not invent behavior.
+                    - Mention relevant source filenames when useful.
+                    - Be concise and technically accurate.
+                    """,
+            },
+            {
+                "role": "user",
+                "content": user_message,
+            },
+        ],
+        max_tokens=max_tokens,
+        temperature=temperature,
+    )
+
+    answer = resp.choices[0].message.content.strip()
+
+    sources = sorted(set(m["source"] for m in metadata))
+
+    citation_block = "\n\nSources:\n"
+
+    for source in sources:
+        citation_block += f"- {source}\n"
+
+    return answer + citation_block

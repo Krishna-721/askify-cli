@@ -16,7 +16,7 @@ app = typer.Typer()
 console = Console()
 
 def print_banner():
-    console.print("""
+    console.print(r"""
 [bold yellow]
     ___        __   _ ____     
    / _ | _____/ /__(_) __/_  __
@@ -24,7 +24,7 @@ def print_banner():
  /_/ |_|___(_)_/\_/_/_/  \_, / 
                          /___/  
 [/bold yellow]
-[dim]v1.0.0 — Know your stuff. Chat with your code and documents[/dim]
+[dim]v1.1.0 — Know your stuff. Chat with your code and documents[/dim]
 """)
 
 def save_history(query: str, answer: str):
@@ -56,7 +56,8 @@ def ask(path: str, query: str):
         progress.add_task("Thinking...", total=None)
         results = retriever(query)
         docs = results["documents"][0]
-        answer = get_llama_response(query, docs)
+        metadata = results["metadatas"][0]
+        answer = get_llama_response(query, docs, metadata)
     console.print(Panel(answer, title="[bold cyan]Askify[/bold cyan]", border_style="cyan"))
     save_history(query, answer)
 
@@ -74,8 +75,9 @@ def chat(path: str):
         with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), transient=True) as progress:
             progress.add_task("Thinking...", total=None)
             results = retriever(query)
+            metadata = results["metadatas"][0]
             docs = results["documents"][0]
-            answer = get_llama_response(query, docs)
+            answer = get_llama_response(query, docs, metadata)
         console.print(Panel(answer, title="[bold cyan]Askify[/bold cyan]", border_style="cyan"))
         save_history(query, answer)
 
