@@ -1,4 +1,5 @@
 import re
+from askify.ingester.summarizer import generate_file_summary
 
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 100
@@ -6,12 +7,13 @@ CHUNK_OVERLAP = 100
 
 def chunk_files(files: list[dict]) -> list[dict]:
     chunks = []
-
+    
     for f in files:
         if f["type"] == "code":
             chunks += chunk_code(f)
         else:
             chunks += chunk_document(f)
+        chunks.append(generate_file_summary(f))
 
     return chunks
 

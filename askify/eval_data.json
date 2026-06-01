@@ -1,0 +1,94 @@
+[
+    {
+        "question": "What does loader.py do?",
+        "expected_source": "askify/ingester/loader.py"
+    },
+    {
+        "question": "How are files loaded into Askify?",
+        "expected_source": "askify/ingester/loader.py"
+    },
+    {
+        "question": "How does Askify process PDF files?",
+        "expected_source": "askify/ingester/loader.py"
+    },
+    {
+        "question": "How are DOCX files handled?",
+        "expected_source": "askify/ingester/loader.py"
+    },
+    {
+        "question": "How does chunking work in Askify?",
+        "expected_source": "askify/ingester/chunker.py"
+    },
+    {
+        "question": "How are code files split into chunks?",
+        "expected_source": "askify/ingester/chunker.py"
+    },
+    {
+        "question": "Why is chunk overlap used?",
+        "expected_source": "askify/ingester/chunker.py"
+    },
+    {
+        "question": "How are document chunks created?",
+        "expected_source": "askify/ingester/chunker.py"
+    },
+    {
+        "question": "How are embeddings generated?",
+        "expected_source": "askify/ingester/embedder.py"
+    },
+    {
+        "question": "How does incremental indexing work?",
+        "expected_source": "askify/ingester/embedder.py"
+    },
+    {
+        "question": "How does Askify detect modified files?",
+        "expected_source": "askify/ingester/embedder.py"
+    },
+    {
+        "question": "How are vectors stored?",
+        "expected_source": "askify/ingester/embedder.py"
+    },
+    {
+        "question": "How does retrieval work?",
+        "expected_source": "askify/retriever.py"
+    },
+    {
+        "question": "How does Askify find relevant chunks?",
+        "expected_source": "askify/retriever.py"
+    },
+    {
+        "question": "How is semantic search implemented?",
+        "expected_source": "askify/retriever.py"
+    },
+    {
+        "question": "How are responses generated?",
+        "expected_source": "askify/responder.py"
+    },
+    {
+        "question": "How does Askify use Groq?",
+        "expected_source": "askify/responder.py"
+    },
+    {
+        "question": "How are source citations added?",
+        "expected_source": "askify/responder.py"
+    },
+    {
+        "question": "How does chat mode work?",
+        "expected_source": "askify/cli.py"
+    },
+    {
+        "question": "How does Askify index a project?",
+        "expected_source": "askify/cli.py"
+    },
+    {
+        "question": "How is query history stored?",
+        "expected_source": "askify/cli.py"
+    },
+    {
+        "question": "How does the clear command work?",
+        "expected_source": "askify/cli.py"
+    },
+    {
+        "question": "What commands are available in Askify?",
+        "expected_source": "askify/cli.py"
+    }
+]
