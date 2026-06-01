@@ -3,6 +3,7 @@ venv/
 
 .env
 
+__pycache__/
 */__pycache__/
 
 # Common Python tool caches

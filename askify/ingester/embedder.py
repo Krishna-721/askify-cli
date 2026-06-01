@@ -18,17 +18,13 @@ model = None
 
 def get_model():
     global model
-
     if model is None:
         model = SentenceTransformer(MODEL_NAME)
-
     return model
-
 
 def get_collection():
     client = chromadb.PersistentClient(path=CHROMA_DIR)
     return client.get_or_create_collection("askify_collection")
-
 
 def file_needs_reindex(chunk, collection):
     source = chunk["source"]
@@ -36,9 +32,9 @@ def file_needs_reindex(chunk, collection):
 
     existing = collection.get(where={"source": source})
 
-    if not existing["metadatas"] or not existing["metadatas"][0]:
+    if not existing["ids"]:
         return True
-    old_hash = existing["metadatas"][0].get("hash")
+    old_hash = existing["metadatas"][0].get("hash") 
     return old_hash != file_hash
 
 

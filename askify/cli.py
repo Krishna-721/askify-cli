@@ -2,6 +2,7 @@ import typer
 from askify.ingester import chunker, embedder, loader
 from askify.responder import get_llama_response
 from askify.retriever import retriever
+from askify.eval.evaluator import evaluate_retrieval
 
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
@@ -110,5 +111,13 @@ def history():
     for i, entry in enumerate(history):
         console.print(f"  [cyan]{i+1}.[/cyan] {entry['query']}")
 
+@app.command()
+def evaluate():
+    """Evaluate retrieval performance on qa_eval.json"""
+    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), transient=True) as progress:
+        progress.add_task("Thinking...", total=None)
+
+    evaluate_retrieval()
+    
 if __name__ == "__main__":
     app()
