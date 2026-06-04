@@ -3,6 +3,7 @@ from askify.ingester import chunker, embedder, loader
 from askify.responder import get_llama_response
 from askify.retriever import retriever
 from askify.eval.evaluator import evaluate_retrieval
+from askify.reranker import rerank
 
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
@@ -56,8 +57,9 @@ def ask(path: str, query: str):
     with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), transient=True) as progress:
         progress.add_task("Thinking...", total=None)
         results = retriever(query)
-        docs = results["documents"][0]
-        metadata = results["metadatas"][0]
+        results = rerank(query, results["documents"][0], results["metadatas"][0])
+        docs = results["documents"]
+        metadata = results["metadatas"]
         answer = get_llama_response(query, docs, metadata)
     console.print(Panel(answer, title="[bold cyan]Askify[/bold cyan]", border_style="cyan"))
     save_history(query, answer)
@@ -76,8 +78,9 @@ def chat(path: str):
         with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), transient=True) as progress:
             progress.add_task("Thinking...", total=None)
             results = retriever(query)
-            metadata = results["metadatas"][0]
-            docs = results["documents"][0]
+            results = rerank(query, results["documents"][0], results["metadatas"][0])
+            docs = results["documents"]
+            metadata = results["metadatas"]
             answer = get_llama_response(query, docs, metadata)
         console.print(Panel(answer, title="[bold cyan]Askify[/bold cyan]", border_style="cyan"))
         save_history(query, answer)
