@@ -26,25 +26,36 @@ That's what Askify solves.
 
 Point it at a folder, ask questions in plain English, and get answers grounded in your actual files.
 
-No copy-pasting code into ChatGPT.
-
-No manually searching through folders.
-
-No losing context.
+No copy-pasting code into ChatGPT. No manually searching through folders. No losing context.
 
 ---
 
 # Features
 
-* Semantic search across code and documents
-* Interactive chat with your codebase
-* Incremental indexing using file hashes
-* Function-aware code chunking
+* AST-based code chunking for accurate function and class boundaries
+* Hybrid retrieval — semantic vector search + BM25 keyword search
+* Cross-encoder reranking for higher context quality
+* LLM-generated file and project summaries at index time
+* Retrieval evaluation framework — Recall@5, Recall@10, Hit Rate
+* Incremental indexing using MD5 file hashes
 * Source-grounded answers with citations
 * Multi-format document ingestion
 * Local vector storage using ChromaDB
-* Retrieval debugging support
 * Persistent indexing between sessions
+
+---
+
+# Retrieval Performance
+
+Evaluated on a 23-question benchmark across all source files.
+
+| Phase | Change | Recall@5 | Recall@10 |
+|---|---|---|---|
+| v1.1 baseline | Regex chunking, vector search only | 86.96% | 86.96% |
+| Phase 2 | LLM file summaries added | 95.65% | 95.65% |
+| Phase 3 | BM25 hybrid retrieval | 91.30% | 100.00% |
+| Phase 4 | Cross-encoder reranking | 86.96% | 100.00% |
+| Phase 5 | AST-based chunking | **95.65%** | **100.00%** |
 
 ---
 
@@ -74,9 +85,7 @@ Sources:
 pip install askify-cli
 ```
 
-Get a free API key from:
-
-https://console.groq.com
+Get a free API key from https://console.groq.com
 
 Create a `.env` file:
 
@@ -101,6 +110,9 @@ askify chat ./src/
 # Find relevant files
 askify where "authentication"
 
+# Run retrieval evaluation
+askify evaluate
+
 # View past queries
 askify history
 
@@ -112,33 +124,31 @@ askify clear
 
 # Architecture
 
-Askify is a Retrieval-Augmented Generation (RAG) system built without orchestration frameworks such as LangChain or LlamaIndex.
-
-The retrieval pipeline, indexing workflow, chunking strategy, and CLI experience are custom-built using ChromaDB, Sentence Transformers, and Groq.
+Askify is a production-oriented RAG system built without orchestration frameworks such as LangChain or LlamaIndex. Every component — retrieval pipeline, chunking strategy, evaluation framework, and CLI — is custom-built.
 
 ```text
 Files
   │
   ▼
-Loader
+Loader          ← code, PDF, DOCX, MD, TXT
   │
   ▼
-Chunker
+AST Chunker     ← function/class-aware splitting
   │
   ▼
-Embedder
+Summarizer      ← LLM file + project summaries
   │
   ▼
-ChromaDB
+Embedder        ← ChromaDB, incremental reindex
   │
   ▼
-Retriever
+Retriever       ← BM25 + Vector Search merged
   │
   ▼
-Groq LLM
+Reranker        ← cross-encoder top-5 selection
   │
   ▼
-Answer + Citations
+Groq LLM        ← grounded answer + citations
 ```
 
 ---
@@ -147,24 +157,7 @@ Answer + Citations
 
 ### Loader
 
-Reads files from disk and extracts content.
-
-Supports:
-
-* Code files
-* PDF documents
-* DOCX documents
-* Markdown
-* Plain text
-
-Skips unnecessary directories such as:
-
-```text
-.git
-__pycache__
-node_modules
-.venv
-```
+Reads files from disk and extracts content. Supports code files, PDF, DOCX, Markdown, and plain text. Skips `.git`, `__pycache__`, `node_modules`, `.venv`.
 
 ---
 
@@ -172,77 +165,97 @@ node_modules
 
 Splits content into retrieval-friendly chunks.
 
-**Code**
-
-* Function-aware chunking
-* Class-aware chunking
+**Code — AST-based**
+- Parses Python source using `ast.parse()`
+- Extracts each `FunctionDef`, `AsyncFunctionDef`, and `ClassDef` by exact line numbers
+- Falls back to regex chunking for non-Python or syntax-error files
 
 **Documents**
+- Paragraph-based chunking with overlapping windows for context preservation
 
-* Paragraph-based chunking
-* Overlapping windows for context preservation
+---
+
+### Summarizer
+
+At index time, generates two types of LLM summaries using Groq:
+
+- **File summary** — one concise technical summary per file describing its purpose and functions
+- **Project summary** — one global summary of the entire codebase, used for broad architecture questions
 
 ---
 
 ### Embedder
 
-Uses:
-
-```text
-sentence-transformers/all-MiniLM-L6-v2
-```
-
-to generate vector embeddings.
-
-Stores vectors and metadata in ChromaDB.
-
-Supports incremental re-indexing using file hashes so only changed files are reprocessed.
+Uses `sentence-transformers/all-MiniLM-L6-v2` to generate vector embeddings. Stores vectors and metadata in ChromaDB. Supports incremental re-indexing using MD5 file hashes — only changed files are reprocessed.
 
 ---
 
 ### Retriever
 
-* Embeds user queries
-* Searches ChromaDB
-* Returns the most relevant chunks
-* Provides source metadata for citations
+Runs two searches in parallel and merges results:
+
+- **Vector search** — semantic similarity via ChromaDB
+- **BM25 search** — keyword matching via `rank-bm25`
+
+Source deduplication applied after merge. Project summary deprioritized to last position for specific queries.
+
+---
+
+### Reranker
+
+Uses `cross-encoder/ms-marco-MiniLM-L-6-v2` to score each retrieved chunk against the query jointly. Returns top 5 highest-scoring chunks to the LLM — reducing noise and improving answer accuracy.
 
 ---
 
 ### Responder
 
-Uses:
+Uses Llama 3.3 70B (Groq) to generate grounded responses from retrieved context. Answers include source file references.
 
-```text
-Llama 3.3 70B (Groq)
+---
+
+### Evaluator
+
+Runs a 23-question benchmark against indexed files. Measures:
+
+- **Recall@5** — correct source in top 5 results
+- **Recall@10** — correct source in top 10 results
+- **Hit Rate** — same as Recall@10
+
+```bash
+askify evaluate
 ```
 
-to generate grounded responses from retrieved context.
-
-Answers include source references whenever possible.
+```text
+Hits@5:   22/23
+Hits@10:  23/23
+Recall@5:  95.65%
+Recall@10: 100.00%
+```
 
 ---
 
 # Supported File Types
 
-| Category  | Extensions                                               |
-| --------- | -------------------------------------------------------- |
-| Code      | `.py`, `.js`, `.ts`, `.java`, `.cpp`, `.c`, `.go`, `.rs` |
-| Documents | `.pdf`, `.docx`, `.md`, `.txt`, `.rst`                   |
+| Category | Extensions |
+|---|---|
+| Code | `.py`, `.js`, `.ts`, `.java`, `.cpp`, `.c`, `.go`, `.rs` |
+| Documents | `.pdf`, `.docx`, `.md`, `.txt`, `.rst` |
 
 ---
 
 # Tech Stack
 
-| Component       | Technology            |
-| --------------- | --------------------- |
-| CLI             | Typer                 |
-| Embeddings      | Sentence Transformers |
-| Vector Database | ChromaDB              |
-| LLM             | Groq (Llama 3.3 70B)  |
-| PDF Parsing     | PyMuPDF               |
-| DOCX Parsing    | python-docx           |
-| Terminal UI     | Rich                  |
+| Component | Technology |
+|---|---|
+| CLI | Typer |
+| Embeddings | Sentence Transformers |
+| Vector Database | ChromaDB |
+| Keyword Search | rank-bm25 |
+| Reranking | cross-encoder/ms-marco-MiniLM-L-6-v2 |
+| LLM | Groq (Llama 3.3 70B) |
+| PDF Parsing | PyMuPDF |
+| DOCX Parsing | python-docx |
+| Terminal UI | Rich |
 
 ---
 
@@ -250,20 +263,9 @@ Answers include source references whenever possible.
 
 * Python 3.10+ required
 * Groq API key required
-* First run downloads embedding model (~80 MB)
-* Broad questions may be incomplete because only the most relevant chunks are sent to the LLM
-* Retrieval quality depends on chunking and embedding quality
-
----
-
-# What's Next
-
-* [ ] Hybrid Retrieval (Vector Search + BM25)
-* [ ] Retrieval Reranking
-* [ ] Retrieval Evaluation Framework
-* [ ] AST-Based Code Chunking
-* [ ] File-Level Summaries
-* [ ] VS Code Extension
+* First run downloads embedding models (~90 MB total)
+* AST chunking currently supports Python only; other languages fall back to regex
+* Indexing large repositories makes multiple Groq API calls for summaries
 
 ---
 
@@ -271,7 +273,6 @@ Answers include source references whenever possible.
 
 Askify was developed using AI-assisted development alongside manual engineering, debugging, testing, and iterative improvements.
 
-The primary goal of the project was to understand how modern RAG systems work internally rather than relying entirely on abstraction frameworks.
 
 ---
 

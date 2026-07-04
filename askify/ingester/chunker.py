@@ -1,5 +1,7 @@
+import ast
 import re
 from askify.ingester.summarizer import generate_file_summary, generate_project_summary
+from askify.graph import build_dependency_graph, graph_to_chunks
 
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 100
@@ -11,13 +13,17 @@ def chunk_files(files: list[dict]) -> list[dict]:
     file_summaries = []
     for f in files:
         if f["type"] == "code":
-            chunks += chunk_code(f)
+            chunks += chunk_code_ast(f)
         else:
             chunks += chunk_document(f)
 
         summary = generate_file_summary(f)
         file_summaries.append(summary)
         chunks.append(summary)
+
+    # build once for all files
+    graph = build_dependency_graph(files)
+    chunks += graph_to_chunks(graph)
 
     chunks.append(generate_project_summary(file_summaries))
 
@@ -89,4 +95,28 @@ def chunk_document(file: dict) -> list[dict]:
             }
         )
 
+    return chunks
+
+def chunk_code_ast(file:dict):
+    source = file["content"]
+    source_files=source.splitlines()
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return chunk_code(file)
+
+    chunks = []
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.ClassDef, ast.AsyncFunctionDef)):
+            start_line = node.lineno - 1
+            end_line = node.end_lineno
+            code_chunk = "\n".join(source_files[start_line:end_line])
+            chunks.append(
+                {
+                    "content": f"FILE: {file['source']}\n\n{code_chunk}",
+                    "source": file["source"],
+                    "type": "code",
+                    "hash": file["hash"],
+                }
+            )
     return chunks
