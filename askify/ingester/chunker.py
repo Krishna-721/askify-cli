@@ -1,6 +1,7 @@
 import ast
 import re
 from askify.ingester.summarizer import generate_file_summary, generate_project_summary
+from askify.graph import build_dependency_graph, graph_to_chunks
 
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 100
@@ -19,6 +20,10 @@ def chunk_files(files: list[dict]) -> list[dict]:
         summary = generate_file_summary(f)
         file_summaries.append(summary)
         chunks.append(summary)
+
+    # build once for all files
+    graph = build_dependency_graph(files)
+    chunks += graph_to_chunks(graph)
 
     chunks.append(generate_project_summary(file_summaries))
 
