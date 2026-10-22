@@ -1,4 +1,5 @@
 import ast
+import hashlib
 
 def build_dependency_graph(files: list[dict]) -> dict:
     graph = {}
@@ -31,7 +32,6 @@ def build_dependency_graph(files: list[dict]) -> dict:
 
 
 def graph_to_chunks(graph: dict) -> list[dict]:
-    import hashlib
     chunks = []
     
     for source, data in graph.items():

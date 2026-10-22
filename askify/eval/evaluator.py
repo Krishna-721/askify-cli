@@ -4,7 +4,7 @@ from askify.retriever import retriever
 
 
 def evaluate_retrieval():
-    questions = json.loads(pathlib.Path("D:\\askify-cli\\askify\\eval_data.json").read_text())
+    questions = json.loads((pathlib.Path(__file__).parent.parent.parent / "eval_data.json").read_text())
 
     hits_5=0
     hits_10 = 0

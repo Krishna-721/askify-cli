@@ -7,7 +7,7 @@ import hashlib
 CODE_EXT = {".py", ".js", ".ts", ".cpp", ".c", ".java", ".go", ".rs"}
 DOC_EXT = {".pdf", ".md", ".txt", ".rst", ".docx"}
 SKIP_DIRS = {"__pycache__", ".git", "node_modules", ".venv", "venv", "store"}
-SKIP_EXTS = {".pyc", ".pyo", ".lock", ".log"}
+SKIP_EXTS = {".pyc", ".pyo", ".lock", ".log", "structure.txt", ".DS_Store", ".egg-info", ".ipynb_checkpoints", ".zip", ".tar.gz", ".tar.bz2", ".tar.xz"}
 SKIP_DIRS = {"__pycache__",".git","node_modules",".venv","venv","store",}
 
 def get_file_hash(content: str):
