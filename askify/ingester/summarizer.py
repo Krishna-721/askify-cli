@@ -1,16 +1,39 @@
+
 import os
+import hashlib
+from pathlib import Path
+from functools import lru_cache
+
 from dotenv import load_dotenv
 from groq import Groq
-import hashlib
 
-env_path = os.path.join(os.path.dirname(__file__), "..", ".env")
 
-load_dotenv()
-client = Groq(api_key=os.getenv("GROQ_CLIENT"))
+ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
+
+
+def get_groq_client() -> Groq:
+    """Create the Groq client on first use."""
+    load_dotenv(ENV_PATH)
+
+    api_key = os.getenv("GROQ_CLIENT")
+    if not api_key:
+        raise RuntimeError(
+            "GROQ_CLIENT is missing. Add your Groq API key "
+            "to the project's .env file."
+        )
+
+    return Groq(api_key=api_key)
+
+
+@lru_cache(maxsize=1)
+def get_client() -> Groq:
+    """Cache the client so it is reused across summarization calls."""
+    return get_groq_client()
+
 
 def generate_file_summary(file: dict) -> dict:
 
-    summary = client.chat.completions.create(
+    summary = get_client().chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[
             {
@@ -31,14 +54,15 @@ def generate_file_summary(file: dict) -> dict:
         "content":f"FILE SUMMARY: {file['source']}\n\n{summary_text}",
         "source": file["source"],
         "type": file["type"],
-        "hash": file["hash"],            
+        "hash": file["hash"],
+        "source_hash": file["hash"]            
     }
 
 
 def generate_project_summary(fil_summaries: list[dict])->dict:
     combined_summaries = "\n\n".join([f"{s['source']}:\n{s['content']}" for s in fil_summaries])
     
-    summary = client.chat.completions.create(
+    summary = get_client().chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[
             {
