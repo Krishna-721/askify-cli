@@ -3,6 +3,7 @@ from pathlib import Path
 import fitz  # PyMuPDF
 from docx import Document
 import hashlib
+from dataclasses import dataclass, field
 
 CODE_EXT = {".py", ".js", ".ts", ".cpp", ".c", ".java", ".go", ".rs"}
 DOC_EXT = {".pdf", ".md", ".txt", ".rst", ".docx"}
@@ -14,43 +15,112 @@ def get_file_hash(content: str):
     return hashlib.md5(content.encode()).hexdigest()
 
 
+@dataclass
+class LoadError:
+    source: str
+    message: str
+
+
+@dataclass
+class LoadReport:
+    files: list[dict] = field(default_factory=list)
+    errors: list[LoadError] = field(default_factory=list)
+
+
+
 def load_path(path: str) -> list[dict]:
+    """Load supported files, raising an error if any file fails to load."""
+    report = load_path_with_report(path)
+
+    if report.errors:
+        error_details = "; ".join(
+            f"{error.source}: {error.message}"
+            for error in report.errors
+        )
+        raise RuntimeError(
+            f"Failed to load one or more files: {error_details}"
+        )
+
+    print(f"[askify] Loaded {len(report.files)} files")
+    return report.files
+
+
+
+def load_path_with_report(path: str) -> LoadReport:
+    """Load a path and return files plus any recorded read errors."""
+    report = LoadReport()
     p = Path(path)
 
-    if p.is_file():
-        files = [p]
+    if not p.exists():
+        raise ValueError(f"Path not found! {path}")
 
+    if p.is_file():
+        candidates = [p]
     elif p.is_dir():
-        files = []
+        candidates = []
 
         for f in p.rglob("*"):
             if not f.is_file():
                 continue
-            if f.suffix in SKIP_EXTS:
+            if f.suffix.lower() in SKIP_EXTS:
                 continue
             if any(skip in f.parts for skip in SKIP_DIRS):
                 continue
             if any(part.endswith(".egg-info") for part in f.parts):
                 continue
-            files.append(f)
-
+            candidates.append(f)
     else:
-        raise ValueError(f"Path not found! {path}")
+        raise ValueError(f"Unsupported path: {path}")
 
-    print(f"[askify] Loaded {len(files)} files")
+    for candidate in candidates:
+        ext = candidate.suffix.lower()
 
-    results = []
+        if ext not in CODE_EXT and ext not in DOC_EXT:
+            continue
 
-    for f in files:
-        ext = f.suffix.lower()
+        try:
+            if ext in CODE_EXT:
+                content = candidate.read_text(
+                    encoding="utf-8",
+                    errors="ignore",
+                )
+                report.files.append({
+                    "content": content,
+                    "source": str(candidate),
+                    "type": "code",
+                    "hash": get_file_hash(content),
+                })
 
-        if ext in CODE_EXT:
-            results += load_code_file(f)
+            elif ext in {".pdf", ".docx"}:
+                if ext == ".pdf":
+                    loaded = load_pdf(candidate)
+                else:
+                    loaded = load_docx(candidate)
 
-        elif ext in DOC_EXT:
-            results += load_doc_file(f)
+                report.files.extend(loaded)
 
-    return results
+            else:
+                content = candidate.read_text(
+                    encoding="utf-8",
+                    errors="ignore",
+                )
+                report.files.append({
+                    "content": content,
+                    "source": str(candidate),
+                    "type": "document",
+                    "hash": get_file_hash(content),
+                })
+
+        except Exception as exc:
+            report.errors.append(
+                LoadError(
+                    source=str(candidate),
+                    message=str(exc),
+                )
+            )
+
+    return report
+
 
 def load_code_file(path: Path) -> list[dict]:
     try:

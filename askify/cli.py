@@ -46,7 +46,7 @@ def index(path: str):
         progress.add_task("Indexing files...", total=None)
         files = loader.load_path(path)
         chunks = chunker.chunk_files(files)
-        embedder.embed_chunks(chunks)
+        embedder.embed_chunks(chunks, scan_path=path)
     console.print("[bold green]✓[/bold green] Indexed successfully!")
 
 @app.command()

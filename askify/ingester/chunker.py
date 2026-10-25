@@ -52,6 +52,7 @@ def chunk_code(file: dict) -> list[dict]:
                 "source": source,
                 "type": "code",
                 "hash": file_hash,
+                "source_hash": file_hash,
             }
         )
 
@@ -80,6 +81,7 @@ def chunk_document(file: dict) -> list[dict]:
                         "source": source,
                         "type": "document",
                         "hash": file_hash,
+                        "source_hash": file_hash,
                     }
                 )
 
@@ -92,6 +94,7 @@ def chunk_document(file: dict) -> list[dict]:
                 "source": source,
                 "type": "document",
                 "hash": file_hash,
+                "source_hash": file_hash,
             }
         )
 
@@ -117,6 +120,7 @@ def chunk_code_ast(file:dict):
                     "source": file["source"],
                     "type": "code",
                     "hash": file["hash"],
+                    "source_hash": file["hash"],
                 }
             )
     return chunks

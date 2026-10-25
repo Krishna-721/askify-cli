@@ -33,14 +33,25 @@ def build_dependency_graph(files: list[dict]) -> dict:
 
 def graph_to_chunks(graph: dict) -> list[dict]:
     chunks = []
-    
+
     for source, data in graph.items():
-        content = f"DEPENDENCY GRAPH: {source}\n\nImports: {', '.join(data['imports'])}\nCalls: {', '.join(data['calls'])}"
+        content = (
+            f"DEPENDENCY GRAPH: {source}\n\n"
+            f"Imports: {', '.join(data['imports'])}\n"
+            f"Calls: {', '.join(data['calls'])}"
+        )
+
+        graph_hash = hashlib.sha256(
+            content.encode("utf-8")
+        ).hexdigest()
+
         chunks.append({
             "content": content,
-            "source": source,
+            "source": f"graph:{source}",
             "type": "graph",
-            "hash": hashlib.md5(content.encode()).hexdigest()
+            "source_hash": graph_hash,
+            "chunk_hash": graph_hash,
+            "hash": graph_hash,
         })
-    
+
     return chunks
